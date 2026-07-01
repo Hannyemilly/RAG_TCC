@@ -165,12 +165,23 @@ def retriever(question: str, collections: list[str] | None = None, limit_context
     if not any(reranked_result.values()):
         return {"message": "Após o re-ranqueamento, nenhum chunk foi considerado relevante o suficiente para a pergunta.", "success": False}
 
-    # 7. Enviar para o LLM
-    llm = AnswerLLM()
+    # 7. Formatar contexto e retornar sem chamar LLM
+    # (o agente que recebe este resultado usa seu próprio LLM para gerar a resposta final)
+    all_chunks = []
+    for doc_chunks in reranked_result.values():
+        if not doc_chunks:
+            continue
+        filename = doc_chunks[0]["filename"]
+        doc_id = doc_chunks[0]["document_id"]
+        header = f"### Documento: {filename}\nId: {doc_id}"
+        pages = []
+        for chunk in doc_chunks:
+            page = chunk.get("page", "N/A")
+            pages.append(f"#### Página {page}\n{chunk['text']}")
+        all_chunks.append(header + "\n\n" + "\n\n".join(pages))
 
-    answer = llm.answer_llm(question, BACKEND_BASE_URL, reranked_result)
-    
-    return answer
+    context_text = "\n\n---\n\n".join(all_chunks)
+    return {"success": True, "context": context_text}
 
     #return reranked_result
     
