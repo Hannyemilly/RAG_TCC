@@ -2,6 +2,7 @@
 import io
 from fastapi import APIRouter, Depends, File, Query, UploadFile, HTTPException
 from fastapi.responses import StreamingResponse
+from starlette.concurrency import run_in_threadpool
 
 from controllers.document_controller import (delete_document_controller,
                                              upload_document_controller, download_document_controller)
@@ -39,8 +40,11 @@ async def upload_document(
     if parent_document_id:
         DcoumentValidation.document_id_exists(parent_document_id)
 
-    # Chama o controller, passando o conteúdo do arquivo
-    response = upload_document_controller(
+    # Chama o controller, passando o conteúdo do arquivo. O processamento (OCR,
+    # trechos e vetores) roda numa thread separada para não travar o servidor:
+    # antes, enquanto um PDF era processado, as buscas do bot ficavam paradas.
+    response = await run_in_threadpool(
+        upload_document_controller,
         hash_document=hash_document,
         file_content=contents,
         filename=file.filename,

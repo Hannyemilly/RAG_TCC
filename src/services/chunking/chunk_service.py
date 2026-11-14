@@ -118,4 +118,11 @@ class ChunkerService:
 
         print(f"\n\nCHUNKS:\n{chunks}\n\n")
 
+        # PDF escaneado sem texto reconhecível, TXT só com espaços etc.: as páginas
+        # existem, mas nenhuma tem texto. Sem esta checagem o documento era registrado
+        # com zero trechos e a resposta dizia que tinha sido indexado.
+        if not chunks:
+            print(f"INFO: Nenhum trecho de texto gerado para o documento '{filename}'.")
+            return {"message": f"Nenhum texto extraído do documento '{filename}'.", "success": False}
+
         return chunks
